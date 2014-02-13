@@ -1,30 +1,15 @@
 (ns langohr-sample.core
     (:gen-class)
-    (:require [langohr.core      :as rmq]
-                   [langohr.channel   :as lch]
-                   [langohr.queue     :as lq]
-                   [langohr.consumers :as lc]
-                   [langohr.basic     :as lb]))
-
-(def ^{:const true}
-    default-exchange-name "")
-
-(defn message-handler
-    [ch {:keys [content-type delivery-tag type] :as meta} ^bytes payload]
-    (println (format "[consumer] Received a message: %s, delivery tag: %d, content type: %s, type: %s"
-                                        (String. payload "UTF-8") delivery-tag content-type type)))
+    (:require 
+       [langohr-sample.publisher :as publisher]
+       [langohr-sample.consumer :as consumer]
+       ))
 
 (defn -main
-    [& args]
-    (let [conn  (rmq/connect {:host "192.168.34.11"})
-                  ch    (lch/open conn)
-                  qname "langohr.examples.hello-world"]
-          (println (format "[main] Connected. Channel id: %d" (.getChannelNumber ch)))
-          (lq/declare ch qname :exclusive false )
-          ;(lq/declare ch qname :exclusive false :auto-delete true)
-          ;(lc/subscribe ch qname message-handler :auto-ack true)
-          (lb/publish ch default-exchange-name qname "Hello!" :content-type "text/plain" :type "greetings.hi")
-          ;(Thread/sleep 2000)
-          (println "[main] Disconnecting...")
-          (rmq/close ch)
-          (rmq/close conn)))
+  ([] (println "lein run [p/c]"))
+  ([role]
+   (case role
+         "p" (publisher/publish)
+         "c" (consumer/consume)
+         (println "lein run [p/c]")))
+  ([role & args] (println "lein run [p/c]")))
