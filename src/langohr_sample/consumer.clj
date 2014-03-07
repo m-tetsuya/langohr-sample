@@ -16,19 +16,26 @@
         {:keys [queue]} (lq/declare ch qname :exclusive false )
         consumer (lcons/create-default ch 
                                        :handle-delivery-fn  
-                                       (fn [ch metadata ^bytes payload]
-                                         (println "Received a message: " (String. payload)))
+                                       (fn [ch  {:keys [headers delivery-tag redelivery?]}  ^bytes payload]
+                                         ; emulate long computation
+                                         ( let [ wait (int (rand 10000))]
+                                           (println "Received a message: No." (String. payload) " : " wait "ms")
+                                           (Thread/sleep wait))
+                                         ; send ack
+                                         (lb/ack ch delivery-tag)
+                                         (println "Send ack: No." (String. payload) ))
                                        :handle-consume-ok-fn 
                                        (fn [consumer-tag]
                                          (println "Consumer registered"))
                                        :handle-cancel-fn (fn [consumer-tag]
                                                            (println "Consumer registered"))
                                        :handle-shutdown-signal-fn (fn  [^String consumer-tag ^ShutdownSignalException sig]
-                                                           (println consumer-tag)))]
+                                                                    (println consumer-tag)))]
     (try
-    (lb/consume ch queue consumer)
+      ;fair dispatch 
+      ;see https://www.rabbitmq.com/tutorials/tutorial-two-java.html
+      (lb/qos ch 1)
+      (lb/consume ch queue consumer)
       (catch Exception e
-        (println (.getMessage e))))
-      
-      
-      ))
+        (println (.getMessage e))))))
+
